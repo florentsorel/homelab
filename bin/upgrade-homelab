@@ -1,0 +1,83 @@
+#!/bin/bash
+
+set -e
+
+if ! [ -e /etc/homelab.conf ]; then
+  if tty >/dev/null; then
+    export TTYOPTS=-it
+  else
+    export TTYOPTS=
+  fi
+
+  arch=$([ "$(arch)" = "x86_64" ] && echo "amd64" || echo "arm64")
+  docker run --rm $TTYOPTS -w /opt -v /var/run/docker.sock:/var/run/docker.sock -v $HOME/.talos:/root/.talos -v $PWD:/opt -e CONTROL_PLANE_IP -e TALOSCONFIG=/root/.talos/talosconfig ghcr.io/florentsorel/homelab-docker-$arch:latest bin/upgrade-homelab
+
+  exit
+fi
+
+talosctl kubeconfig
+
+echo "Adding labels to nodes..."
+if ! kubectl get node/node-large -o json | jq -e '.metadata.labels["homelab/role"] == "core"' > /dev/null; then
+  kubectl label nodes node-large homelab/role=core --overwrite
+else
+  echo "node-large is already labeled as core"
+fi
+
+if ! kubectl get node/node-medium -o json | jq -e '.metadata.labels["homelab/role"] == "data"' > /dev/null; then
+  kubectl label nodes node-medium homelab/role=data --overwrite
+else
+  echo "node-medium is already labeled as data"
+fi
+
+if ! kubectl get node/node-small -o json | jq -e '.metadata.labels["homelab/role"] == "arr"' > /dev/null; then
+  kubectl label nodes node-small homelab/role=arr --overwrite
+else
+  echo "node-small is already labeled as arr"
+fi
+
+echo "Installing ArgoCD..."
+helm repo add argo https://argoproj.github.io/argo-helm
+# renovate-helm: depName=argo-cd registryUrl=https://argoproj.github.io/argo-helm
+argocd_version=8.0.15
+helm upgrade \
+  --install argocd argo/argo-cd \
+  --namespace argocd \
+  --version $argocd_version \
+  --create-namespace \
+  --values k8s/argocd/helm/affinity.yml \
+  --wait
+
+echo "Waiting for argocd-server service to be created..."
+while true; do
+  if kubectl get svc argocd-server -n argocd >/dev/null 2>&1; then
+    echo "argocd-server service found."
+    break
+  fi
+  echo "Waiting..."
+  sleep 2
+done
+
+echo "Checking current service type..."
+current_type=$(kubectl get svc argocd-server -n argocd -o jsonpath='{.spec.type}')
+if [ "$current_type" != "NodePort" ]; then
+  echo "Service type is $current_type. Patching to NodePort..."
+  kubectl patch svc argocd-server -n argocd -p '{
+    "spec": {
+      "type": "NodePort",
+      "ports": [
+        {
+          "port": 443,
+          "targetPort": 8080,
+          "nodePort": 32000,
+          "protocol": "TCP"
+        }
+      ]
+    }
+  }'
+else
+  echo "argocd-server is already of type NodePort."
+fi
+
+argocd_port=$(kubectl get svc argocd-server -n argocd -o jsonpath='{.spec.ports[?(@.name=="https")].nodePort}')
+echo "Argocd is exposed on NodePort: $argocd_port"

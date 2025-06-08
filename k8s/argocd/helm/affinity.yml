@@ -1,0 +1,8 @@
+global:
+  affinity:
+    nodeAffinity:
+      matchExpressions:
+        - key: homelab/role
+          operator: In
+          values:
+            - core
