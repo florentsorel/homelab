@@ -1,0 +1,27 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "addLabels": ["dependencies"],
+  "semanticCommitType": "chore",
+  "prConcurrentLimit": 0,
+  "prHourlyLimit": 0,
+  "rebaseWhen": "behind-base-branch",
+  "schedule": "* 0-10 * * 1",
+  "timezone": "Europe/Paris",
+  "enabledManagers": [
+    "custom.regex",
+    "github-actions"
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "fileMatch": [
+        "bin\\/upgrade-homelab$"
+      ],
+      "matchStrings": [
+        "#\\s*renovate-helm: depName=(?<depName>.*?)( registryUrl=(?<registryUrl>.*?))?\\s.*?_version\\s*=\\s*(?<currentValue>.*)"
+      ],
+      "datasourceTemplate": "helm"
+    }
+  ]
+}
