@@ -45,7 +45,7 @@ helm upgrade \
   --namespace argocd \
   --version $argocd_version \
   --create-namespace \
-  --values k8s/argocd/helm/affinity.yml \
+  --values k8s/argocd/helm/values.yml \
   --wait
 
 echo "Waiting for argocd-server service to be created..."
@@ -81,3 +81,6 @@ fi
 
 argocd_port=$(kubectl get svc argocd-server -n argocd -o jsonpath='{.spec.ports[?(@.name=="https")].nodePort}')
 echo "Argocd is exposed on NodePort: $argocd_port"
+
+echo "Deploying metallb..."
+kubectl apply -f k8s/metallb/application.yml

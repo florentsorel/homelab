@@ -1,4 +1,5 @@
 global:
+  domain: argocd.sorel.dev
   affinity:
     nodeAffinity:
       matchExpressions:
