@@ -98,3 +98,6 @@ done
 
 echo "Deploying MetalLB..."
 kubectl apply -f k8s/metallb/application.yml
+
+echo "Deploying sorel.dev..."
+kubectl apply -f k8s/sorel-dev/application.yml
