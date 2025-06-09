@@ -60,27 +60,41 @@ done
 
 echo "Checking current service type..."
 current_type=$(kubectl get svc argocd-server -n argocd -o jsonpath='{.spec.type}')
-if [ "$current_type" != "NodePort" ]; then
-  echo "Service type is $current_type. Patching to NodePort..."
+if [ "$current_type" != "LoadBalancer" ]; then
+  echo "Service type is $current_type. Patching to LoadBalancer..."
   kubectl patch svc argocd-server -n argocd -p '{
     "spec": {
-      "type": "NodePort",
+      "type": "LoadBalancer",
       "ports": [
         {
+          "name": "http",
+          "port": 80,
+          "targetPort": 8080,
+          "protocol": "TCP"
+        },
+        {
+          "name": "https",
           "port": 443,
           "targetPort": 8080,
-          "nodePort": 32000,
           "protocol": "TCP"
         }
       ]
     }
   }'
 else
-  echo "argocd-server is already of type NodePort."
+  echo "argocd-server is already of type LoadBalancer."
 fi
 
-argocd_port=$(kubectl get svc argocd-server -n argocd -o jsonpath='{.spec.ports[?(@.name=="https")].nodePort}')
-echo "Argocd is exposed on NodePort: $argocd_port"
+echo "Waiting for argocd-server EXTERNAL-IP from LoadBalancer..."
+while true; do
+  ext_ip=$(kubectl get svc argocd-server -n argocd -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || echo "")
+  if [ -n "$ext_ip" ]; then
+    echo "argocd-server EXTERNAL-IP: $ext_ip"
+    break
+  fi
+  echo "Waiting for EXTERNAL-IP..."
+  sleep 3
+done
 
-echo "Deploying metallb..."
+echo "Deploying MetalLB..."
 kubectl apply -f k8s/metallb/application.yml
