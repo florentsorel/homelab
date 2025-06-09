@@ -1,6 +1,6 @@
 controller:
   nodeSelector:
-    homelab/core: core
+    homelab/role: core
 
   resources:
     requests:
