@@ -1,6 +1,6 @@
 controller:
   nodeSelector:
-    homelab/node-type: core
+    homelab/core: core
 
   resources:
     requests:
