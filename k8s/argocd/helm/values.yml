@@ -7,3 +7,7 @@ global:
           operator: In
           values:
             - core
+
+configs:
+  cm:
+    kustomize.buildOptions: --enable-helm
