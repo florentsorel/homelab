@@ -1,7 +1,6 @@
 controller:
   nodeSelector:
     homelab/role: core
-
   resources:
     requests:
       cpu: 50m
@@ -11,6 +10,8 @@ controller:
       memory: 200Mi
 
 speaker:
+  nodeSelector:
+    homelab/role: core
   resources:
     requests:
       cpu: 50m
