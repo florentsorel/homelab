@@ -93,7 +93,7 @@ while true; do
     break
   fi
   echo "Waiting for EXTERNAL-IP..."
-  sleep 3
+  sleep 2
 done
 
 echo "Deploying MetalLB..."
